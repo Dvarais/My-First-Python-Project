@@ -1,62 +1,13 @@
 import os
 import json
 import random
+from game_data import Enemy
 
-# --- ОПРЕДЕЛЯЕМ ПУТЬ К ФАЙЛУ --- | --- DEFINING THE FILE PATH ---
-# Получаем папку, где лежит скрипт game.py | Getting the folder where the game.py script is located
-script_dir = os.path.dirname(os.path.abspath(__file__))
-# Склеиваем путь к папке + имя файла. Получится что-то типа C:\Users\tik26\Desktop\test\savefile.json | Joining the folder path + file name. It will look like C:\Users\tik26\Desktop\test\savefile.json
-SAVE_FILE = os.path.join(script_dir, "savefile.json")
-
-# --- 1. КЛАССЫ (ЧЕРТЕЖИ) | CLASSES (BLUEPRINTS) --- 
-class Enemy:
-    def __init__(self, name, hp, damage):
-        self.name = name
-        self.hp = hp
-        self.damage = damage
-
-# --- 2. ДАННЫЕ (КАРТА) | DATA (MAP) ---
-rooms = {
-    'Холл': {
-        'описание': 'Вы в Холле. Двери ведут на Кухню и в Чулан.',
-        'item': 'Фонарик',
-        'enemy': None,
-        'exits': ['Кухня', 'Чулан']
-    },
-    'Кухня': {
-        'описание': 'Здесь пахнет едой. На столе что-то блестит.',
-        'item': 'Ключ',
-        # Скелет: 50 HP, бьет на 15 | Skeleton: 50 HP, hits for 15
-        'enemy': Enemy("Скелет", 50, 15),
-        'exits': ['Холл', 'Сад']
-    },
-    'Чулан': {
-        'описание': 'Пыльная каморка с инструментами.',
-        'item': 'Меч',
-        'enemy': None,
-        'exits': ['Холл']
-    },
-    'Сад': {
-        'описание': 'Вы в темном Саду. Здесь веет опасностью.',
-        'item': 'Яблоко',
-        # Босс Орк: 80 HP, бьет на 20 | Boss Orc: 80 HP, hits for 20
-        'enemy': Enemy("Орк", 80, 20),
-        'exits': ['Кухня']
-    },
-    'Магазин': {
-        'описание': 'Магазин торговца. Здесь можно купить разные вещи.',
-        'item': None,
-        'sale_items': {
-            'Лечебное зелье': 20,
-            'Топор': 50,
-            'Щит': 40
-        },
-        'enemy': None,
-        'exits': ['Холл']
-    }
-}
 
 # --- 3. ФУНКЦИИ (ДВИЖОК) | FUNCTIONS (ENGINE) ---
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+SAVE_FILE = os.path.join(script_dir, "savefile.json")
 
 def save_game(room, inv, hp, xp, level, gold, map_data):
     # 1. Готовим карту к сохранению (превращаем Enemies в словари) | Preparing the map for saving (turning Enemies into dictionaries)
@@ -128,7 +79,7 @@ def clear():
     """Очищает экран консоли | Clears the console screen"""
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def show_status(room, inv, hp, level, xp, gold):
+def show_status(room, inv, hp, level, xp, gold, rooms):
     print("------------------------------------------------")
     print(f"📍 Вы находитесь: {rooms[room]['описание']}")
     print(f"🚪 Выходы: {rooms[room]['exits']}")
@@ -138,7 +89,7 @@ def show_status(room, inv, hp, level, xp, gold):
     print(f"🎒 Инвентарь: {inv}")
     print("------------------------------------------------")
 
-def shop(gold, inv):
+def shop(gold, inv, current_room):
     if current_room != 'Холл':
         print("Магазин недоступен.")
         print("Магазин доступен только из Холла.")
@@ -277,90 +228,3 @@ def attack_enemy(room, inv, map_data, player_hp, player_level, player_xp, player
     print(f"💥 {enemy.name} атакует вас в ответ на {enemy_dmg} урона!")
     
     return player_hp - enemy_dmg, player_xp, player_level, player_gold
-
-# --- 4. ОСНОВНОЙ ЦИКЛ (MAIN LOOP) | MAIN LOOP ---
-
-current_room = 'Холл'
-inventory = []
-player_hp = 100
-player_xp = 0
-player_level = 1
-player_gold = 0
-
-clear()
-
-while True:
-    # --- Условия победы/поражения | Win/Loss conditions ---
-    if current_room == 'Сад' and rooms['Сад']['enemy'] is None:
-        # Если мы в Саду и убили Орка - это финальная победа | If we are in the Garden and killed the Orc - this is the final victory
-        print("\n🏆 ПОБЕДА! Вы одолели Орка и стали героем подземелья!")
-        break
-    
-    # Старый вариант победы (через дверь в Холле) | Old victory variant (via the Hall door)
-    if current_room == 'Холл' and 'Ключ' in inventory:
-        print("\n🎉 ПОБЕДА! Вы открыли дверь ключом и сбежали!")
-        break
-
-    # --- Интерфейс | Interface ---
-    show_status(current_room, inventory, player_hp, player_level, player_xp, player_gold)
-    check_enemy(current_room, rooms)
-    
-    # --- Ввод | Input ---
-    command = input("\nДействие (Кухня, Чулан, Холл, Сад, Магазин, Взять, Атаковать, Поесть, Сохранить, Загрузить, Выход) > ").capitalize()
-    
-    clear() 
-
-    # --- Логика | Logic ---
-    if command == 'Выход':
-        print("Игра сохранена (шутка, сохранения мы еще не проходили). Пока!")
-        break
-    
-    elif command == 'Сохранить':
-        save_game(current_room, inventory, player_hp, player_xp, player_level, player_gold, rooms)
-        input("Нажмите Enter...") # Чтобы игрок успел прочитать | So the player has time to read
-
-    elif command == 'Магазин':
-        if current_room == 'Холл':
-            player_gold, inventory = shop(player_gold, inventory)
-        else:
-            print("Торговец ждет вас в Холле.")
-            input("Нажмите Enter...") # Чтобы игрок успел прочитать | So the player has time to read
-
-    elif command == 'Загрузить':
-        result = load_game()
-        if result:
-            # Теперь распаковываем 4 переменные, включая rooms | Now unpacking 4 variables, including rooms
-            current_room, inventory, player_hp, player_xp, player_level, player_gold, rooms = result
-        else:
-            pass
-        input("Нажмите Enter...") # Чтобы игрок успел прочитать | So the player has time to read 
-
-    elif command == 'Взять':
-        handle_item(current_room, inventory, rooms)
-        
-    elif command == 'Поесть':
-        if 'Яблоко' in inventory:
-            inventory.remove('Яблоко')
-            player_hp += 20
-            if player_hp > 100: player_hp = 100
-            print(f"🍏 Ням! Здоровье восстановлено до {player_hp}%")
-
-        elif 'Лечебное зелье' in inventory:
-            inventory.remove('Лечебное зелье')
-            player_hp = 100
-            print("🧪 Вы выпили Лечебное зелье. Здоровье полностью восстановлено!")
-
-        else:
-            print("У вас нет еды или зелья.")
-
-    elif command == 'Атаковать':
-        player_hp, player_xp, player_level, player_gold = attack_enemy(current_room, inventory, rooms, player_hp, player_level, player_xp , player_gold)
-        if player_hp <= 0:
-            print("\n☠️ В ГЛАЗАХ ПОТЕМНЕЛО... GAME OVER")
-            break
-            
-    else:
-        current_room, player_hp = move_player(current_room, command, rooms, player_hp)
-        if player_hp <= 0:
-            print("\n☠️ В ГЛАЗАХ ПОТЕМНЕЛО... GAME OVER")
-            break

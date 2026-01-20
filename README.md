@@ -1,10 +1,7 @@
 # Текстовая RPG на Python
 
 Это мой первый проект на Python. Консольная ролевая игра с элементами RPG. 
-Создавал я это с целью обучиться и понять, как работают некоторые функции Python.
-Не стоит судить строго мой первый, так скажем, проект. Это просто изучение материала.
-Скажу честно, но да, я использовал ИИ для обучения, и его комментарии можно найти в коде.
-Но большая часть кода была написана мной.
+Проект был разделен на несколько модулей для лучшей структуры и читаемости.
 
 ## Функционал:
 - 🗺️ **Перемещение** по локациям (Холл, Кухня, Чулан, Сад).
@@ -14,20 +11,22 @@
 - 📈 **Прокачка**: Опыт и уровни героя.
 - 💾 **Сохранения**: Можно сохранить и загрузить игру (JSON).
 
+## Структура проекта:
+- `main.py` — Основной цикл игры и точка входа.
+- `game_data.py` — Данные о комнатах, врагах и игровые классы.
+- `game_utils.py` — Логика игры: функции для боя, перемещения, магазина и сохранений.
+
 ## Как запустить:
 1. Установить Python.
-2. Скачайте файл `game.py`.
-3. Запустите в терминале: `py game.py`.
+2. Скачайте все файлы проекта (`main.py`, `game_data.py`, `game_utils.py`).
+3. Запустите в терминале: `py main.py`.
 
 ---
 
 # Text-based RPG in Python
 
 This is my first Python project. A console-based role-playing game with RPG elements.
-I created this to learn and understand how certain Python functions work.
-Please don't judge my first project, so to speak, too harshly. It's just a learning experience.
-I'll be honest, yes, I used AI for learning, and its comments can be found in the code.
-But most of the code was written by me.
+The project has been split into several modules for better structure and readability.
 
 ## Features:
 - 🗺️ **Movement** through locations (Hall, Kitchen, Closet, Garden).
@@ -37,7 +36,12 @@ But most of the code was written by me.
 - 📈 **Progression**: Hero experience and levels.
 - 💾 **Saves**: Ability to save and load the game (JSON).
 
+## Project Structure:
+- `main.py` — Main game loop and entry point.
+- `game_data.py` — Data about rooms, enemies, and game classes.
+- `game_utils.py` — Game logic: functions for combat, movement, shop, and saves.
+
 ## How to Run:
 1. Install Python.
-2. Download the `game.py` file.
-3. Run in the terminal: `py game.py`.
+2. Download all project files (`main.py`, `game_data.py`, `game_utils.py`).
+3. Run in the terminal: `py main.py`.
