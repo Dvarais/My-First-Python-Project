@@ -5,13 +5,25 @@ class Enemy:
         self.hp = hp
         self.damage = damage
 
+class Player:
+    def __init__(self):
+        self.hp = 100
+        self.xp = 0
+        self.level = 1
+        self.gold = 0
+        self.inventory = []
+
+    def is_alive(self):
+        return self.hp > 0
+        
+
 # --- 2. ДАННЫЕ (КАРТА) | DATA (MAP) ---
 rooms = {
     'Холл': {
-        'описание': 'Вы в Холле. Двери ведут на Кухню и в Чулан.',
+        'описание': 'Вы в Холле. Двери ведут на Кухню и в Чулан и в Магазин.',
         'item': 'Фонарик',
         'enemy': None,
-        'exits': ['Кухня', 'Чулан']
+        'exits': ['Кухня', 'Чулан', 'Магазин']
     },
     'Кухня': {
         'описание': 'Здесь пахнет едой. На столе что-то блестит.',

@@ -1,15 +1,14 @@
 import os
 import json
 import random
-from game_data import Enemy
-
+from game_data import Enemy, Player
 
 # --- 3. ФУНКЦИИ (ДВИЖОК) | FUNCTIONS (ENGINE) ---
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 SAVE_FILE = os.path.join(script_dir, "savefile.json")
 
-def save_game(room, inv, hp, xp, level, gold, map_data):
+def save_game(room, player, map_data):
     # 1. Готовим карту к сохранению (превращаем Enemies в словари) | Preparing the map for saving (turning Enemies into dictionaries)
     serializable_rooms = {}
 
@@ -34,11 +33,11 @@ def save_game(room, inv, hp, xp, level, gold, map_data):
     # 2. Сохраняем все данные в файл | Saving all data to file
     data = {
         'current_room': room,
-        'inventory': inv,
-        'hp': hp,
-        'xp': xp,
-        'level': level,
-        'gold': gold,
+        'inventory': player.inventory,
+        'hp': player.hp,
+        'xp': player.xp,
+        'level': player.level,
+        'gold': player.gold,
         'rooms_data': serializable_rooms # Добавляем карту | Adding the map
     }
     # "w" означает write (запись) | "w" means write
@@ -46,7 +45,7 @@ def save_game(room, inv, hp, xp, level, gold, map_data):
         json.dump(data, f, ensure_ascii=False, indent=4) # indent для красоты файла | indent for file readability
     print("💾 Игра (и состояние врагов) сохранена!")
 
-def load_game():
+def load_game(player):
     try:
         # "r" означает read (чтение) | "r" means read
         with open(SAVE_FILE, "r", encoding="utf-8") as f:
@@ -65,10 +64,16 @@ def load_game():
                 # 2. Кладем её в словарь | 2. Put it in the dictionary
                 loaded_rooms[room_name]['enemy'] = new_enemy
 
+
+        player.inventory = data["inventory"]
+        player.hp = data["hp"]
+        player.xp = data["xp"]
+        player.level = data["level"]
+        player.gold = data["gold"]
+
         print("📂 Сохранение загружено полностью!")
 
-        # 3. Возвращение данных | 3. Return the loaded data
-        return data["current_room"], data["inventory"], data["hp"], data["xp"], data["level"], data["gold"], loaded_rooms
+        return data["current_room"], loaded_rooms
 
     except FileNotFoundError:
         # Если файла нет — просто скажем об этом, без ошибок | If the file doesn't exist - just inform without errors
@@ -79,107 +84,97 @@ def clear():
     """Очищает экран консоли | Clears the console screen"""
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def show_status(room, inv, hp, level, xp, gold, rooms):
+def show_status(room, player, rooms):
     print("------------------------------------------------")
     print(f"📍 Вы находитесь: {rooms[room]['описание']}")
     print(f"🚪 Выходы: {rooms[room]['exits']}")
-    print(f"👤 Герой: Уровень {level} (Опыт: {xp}/100)")
-    print(f"❤️ Здоровье: {hp}%")
-    print(f"💰 Золото: {gold}")
-    print(f"🎒 Инвентарь: {inv}")
+    print(f"👤 Герой: Уровень {player.level} (Опыт: {player.xp}/100)")
+    print(f"❤️ Здоровье: {player.hp}%")
+    print(f"💰 Золото: {player.gold}")
+    print(f"🎒 Инвентарь: {player.inventory}")
     print("------------------------------------------------")
 
-def shop(gold, inv, current_room):
-    if current_room != 'Холл':
-        print("Магазин недоступен.")
-        print("Магазин доступен только из Холла.")
-        return gold, inv
-    clear()
-    print("\n🏪 Добро пожаловать в магазин!")
-    print(f"В вашем кошельке сейчас: {gold} золота.")
-    print("--- ЛАВКА ТОРГОВЦА ---")
-    print("1. Лечебное зелье (20 золота) - восстанавливает 100% здоровья")
-    print("2. Боевой Топор (50 золота) - Урон 35-50")
-    print("3. Щит (40 золота) - Защита 5-10")
-    print("4. Выйти из магазина")
-    
-    choice = input("Выберите товар (1-4): ")
-    
-    if choice == '1':
-        if gold >= 20:
-            gold -= 20
-            inv.append('Лечебное зелье')
-            print("Вы купили Лечебное зелье!")
-        else:
-            print("Недостаточно золота.")
-    elif choice == '2':
-        if gold >= 50:
-            if 'Боевой Топор' not in inv:
-                gold -= 50
-                inv.append('Боевой Топор')
-                print("Вы купили Боевой Топор!")
-            else:
-                print("У вас уже есть Боевой Топор.")
-        else:
-            print("Недостаточно золота.")
-    
-    elif choice == '3':
-        if gold >= 40:
-            if 'Щит' not in inv:
-                gold -= 40
-                inv.append('Щит')
-                print("Вы купили Щит!")
-            else:
-                print("У вас уже есть Щит.")
-        else:
-            print("Недостаточно золота.")
+def shop(player, rooms):
+    while True:
+        clear()
+        print("\n🏪 Добро пожаловать в магазин!")
+        print(f"В вашем кошельке сейчас: {player.gold} золота.")
+        print("--- ЛАВКА ТОРГОВЦА ---")
+        items_for_sale = rooms['Магазин']['sale_items']
+        item_names = list(items_for_sale.keys())
 
-    elif choice == '4':
-        print("Вы вышли из магазина.") # Выходим из магазина обратно в игру | Exiting the shop back to the game
-    else:
-        print("Неверный выбор.")
-    
-    return gold, inv # Возвращаем остаток денег и обновленный инвентарь | Return remaining gold and updated inventory
+        for i, name in enumerate(item_names, 1):
+            price = items_for_sale[name]
+            print(f"{i}. {name} ({price} золота)")
+        print(f"{len(item_names) + 1}. Выйти")
+        
+        choice = input("Выберите номер: ")
+        if choice.isdigit():
+            idx = int(choice) - 1
+            if 0 <= idx < len(item_names):
+                item_name = item_names[idx]
+                price = items_for_sale[item_name]
+                if player.gold >= price:
+                    player.gold -= price
+                    player.inventory.append(item_name)
+                    print(f"Вы купили {item_name}")
+                    input("\n Нажмите Enter, чтобы продолжить...")
+                else:
+                    print("Недостаточно золота.")
+                    input("\n Нажмите Enter, чтобы продолжить...")
+            elif idx == len(item_names):
+                print("Выход...")
+                input("\n Нажмите Enter, чтобы продолжить...")
+                break
+        else:
+            print("Пожалуйста, введите число")
 
 def check_enemy(room, map_data):
     enemy = map_data[room].get('enemy')
     if enemy:
         print(f"\n👀 Внимание! В комнате находится {enemy.name} (HP: {enemy.hp})!")
 
-def move_player(current, direction, map_data, hp):
+def move_player(current, direction, map_data, player):
     enemy = map_data[current].get('enemy')
-    if enemy:
-        escape_damage = random.randint(15, 20)
-        print(f"\n💥 Вы пытаетесь убежать, но {enemy.name} наносит вам {escape_damage} урона!")
-        input("Нажмите Enter...")
-        return current, hp - escape_damage
-
+    
     if direction in map_data[current]['exits']:
-        return direction, hp
+
+        if enemy:
+            escape_damage = random.randint(15, 20)
+            print(f"\n💥 Вы пытаетесь убежать, но {enemy.name} наносит вам {escape_damage} урона!")
+            player.hp -= escape_damage
+            input("Нажмите Enter...")
+
+            if not player.is_alive():
+                return current
+
+        return direction
+        
+        
     elif direction not in map_data[current]['exits']:
         print("Туда нет прохода.")
         input("Нажмите Enter...")
-        return current, hp
+        return current
 
-def handle_item(room, inv, map_data):
+def handle_item(room, player, map_data):
     thing = map_data[room]['item']
     if thing is None:
         print("Здесь пусто.")
     else:
-        inv.append(thing)
+        player.inventory.append(thing)
         map_data[room]['item'] = None
         print(f"Вы взяли: {thing}")
 
-def attack_enemy(room, inv, map_data, player_hp, player_level, player_xp, player_gold):
+def attack_enemy(room, player, map_data):
     enemy = map_data[room].get('enemy')
     if not enemy:
         print("Здесь никого нет.")
-        return player_hp, player_xp, player_level, player_gold
+        return 
     # 1. Атака Игрока (с рандомом) | 1. Player Attack (randomized)
-    if 'Боевой Топор' in inv:
+    if 'Боевой Топор' in player.inventory:
         damage = random.randint(35, 50) # Топор: 35-50 урона | Axe: 35-50 damage
         weapon_name = 'Боевой Топор'
-    elif 'Меч' in inv:
+    elif 'Меч' in player.inventory:
         damage = random.randint(20, 35) # Меч: 20-35 урона | Sword: 20-35 damage
         weapon_name = 'Меч'
     else:
@@ -200,31 +195,31 @@ def attack_enemy(room, inv, map_data, player_hp, player_level, player_xp, player
         map_data[room]['enemy'] = None 
         xp_gain = 60
         gold_gain = random.randint(20, 25)
-        player_gold += gold_gain
-        player_xp += xp_gain
+        player.gold += gold_gain
+        player.xp += xp_gain
         print(f"⭐ Вы получили {xp_gain} опыта и {gold_gain} золота!") 
         # Награда за победу | Reward for victory
-        if player_xp >= 100:
-            player_level += 1
-            player_xp -= 100
-            player_hp = 100  # Восстанавливаем здоровье при повышении уровня | Restore health on level up
-            print(f"⬆️ Поздравляем! Вы достигли уровня {player_level}!")
+        if player.xp >= 100:
+            player.level += 1
+            player.xp -= 100
+            player.hp = 100  # Восстанавливаем здоровье при повышении уровня | Restore health on level up
+            print(f"⬆️ Поздравляем! Вы достигли уровня {player.level}!")
             print("❤️ Ваше здоровье полностью восстановлено!")
 
-        return player_hp, player_xp, player_level, player_gold # Возвращаем обновленные данные | Return updated data
+        return # Возвращаем обновленные данные | Return updated data
 
     # 3. Ответный удар Врага (с рандомом) | 3. Enemy counter-attack (randomized)
     # Урон врага +/- 5 единиц | Enemy damage +/- 5 units
     enemy_dmg = random.randint(enemy.damage - 5, enemy.damage + 5)
 
-    if 'Щит' in inv:
-        Shield_block = random.randint(5, 10) # Щит блокирует 5-10 урона | Shield blocks 5-10 damage
-        enemy_dmg -= Shield_block
-        print(f"🛡️ Ваш Щит блокировал {Shield_block} урона!")
+    if 'Щит' in player.inventory:
+        shield_block = random.randint(5, 10) # Щит блокирует 5-10 урона | Shield blocks 5-10 damage
+        enemy_dmg -= shield_block
+        print(f"🛡️ Ваш Щит блокировал {shield_block} урона!")
 
     if enemy_dmg < 0: enemy_dmg = 0
+    player.hp -= enemy_dmg
     
     print(f"{enemy.name} еще стоит! (HP: {enemy.hp})")
     print(f"💥 {enemy.name} атакует вас в ответ на {enemy_dmg} урона!")
     
-    return player_hp - enemy_dmg, player_xp, player_level, player_gold
