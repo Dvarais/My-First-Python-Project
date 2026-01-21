@@ -1,5 +1,6 @@
-# --- 4. ОСНОВНОЙ ЦИКЛ (MAIN LOOP) | MAIN LOOP ---
+# Главный модуль: основной цикл игры | Main module: game loop
 from game_data import rooms, Player
+from items import Weapon, Item, Consumables, create_item
 from game_utils import *
 
 current_room = 'Холл'
@@ -8,27 +9,25 @@ player = Player()
 clear()
 
 while True:
-    # --- Условия победы/поражения | Win/Loss conditions ---
+    # Проверка условий завершения игры | Win/Loss conditions check
     if current_room == 'Сад' and rooms['Сад']['enemy'] is None:
-        # Если мы в Саду и убили Орка - это финальная победа | If we are in the Garden and killed the Orc - this is the final victory
         print("\n🏆 ПОБЕДА! Вы одолели Орка и стали героем подземелья!")
         break
 
-    # --- Интерфейс | Interface ---
+    # Обновление интерфейса пользователя | UI update
     show_status(current_room, player, rooms)
     check_enemy(current_room, rooms)
     
-    # --- Ввод | Input ---
+    # Обработка ввода пользователя | User input handling
     command = input("\nДействие (Кухня, Чулан, Холл, Сад, Магазин, Побег, Взять, Атаковать, Поесть, Сохранить, Загрузить, Выход) > ").capitalize()
     
     clear() 
 
-    # --- Логика | Logic ---
-    
+    # Логика команд и взаимодействия | Command and interaction logic
     if current_room == 'Магазин':
         shop(player, rooms)
         current_room = "Холл"
-        input("Нажмите Enter...") # Чтобы игрок успел прочитать | So the player has time to read
+        input("Нажмите Enter...") 
     
     elif command == 'Выход':
         print("Спасибо за игру! Не забудьте сохраниться перед выходом.")
@@ -36,19 +35,23 @@ while True:
     
     elif command == 'Сохранить':
         save_game(current_room, player, rooms)
-        input("Нажмите Enter...") # Чтобы игрок успел прочитать | So the player has time to read
+        input("Нажмите Enter...") 
 
     elif command == 'Загрузить':
         result = load_game(player)
         if result:
-            # Теперь распаковываем 4 переменные, включая rooms | Now unpacking 4 variables, including rooms
             current_room, rooms = result
-        else:
-            pass
-        input("Нажмите Enter...") # Чтобы игрок успел прочитать | So the player has time to read 
+        input("Нажмите Enter...") 
 
     elif command == 'Побег':
-        if current_room == 'Холл' and 'Ключ' in player.inventory:
+        # Логика завершения игры через главный выход | Win condition via the main exit
+        has_key = False
+        for thing in player.inventory:
+            if thing.name == 'Ключ':
+                has_key = True
+                break
+
+        if has_key and current_room == 'Холл':
             print("\n🎉 ПОБЕДА! Вы открыли дверь ключом и сбежали!")
             break
         else:
@@ -58,28 +61,30 @@ while True:
         handle_item(current_room, player, rooms)
         
     elif command == 'Поесть':
-        if 'Яблоко' in player.inventory:
-            player.inventory.remove('Яблоко')
-            player.hp += 20
+        # Логика использования расходников | Consumables usage logic
+        food_found = None
+        for thing in player.inventory:
+            if isinstance(thing, Consumables):
+                food_found = thing
+                break
+        if food_found:
+            player.inventory.remove(food_found)
+            player.hp += food_found.heal_amount
             if player.hp > 100: player.hp = 100
-            print(f"🍏 Ням! Здоровье восстановлено до {player.hp}%")
-
-        elif 'Лечебное зелье' in player.inventory:
-            player.inventory.remove('Лечебное зелье')
-            player.hp = 100
-            print("🧪 Вы выпили Лечебное зелье. Здоровье полностью восстановлено!")
-
+            print(f"Ваше здоровье успешно восстановлено на {food_found.heal_amount}")
         else:
             print("У вас нет еды или зелья.")
 
     elif command == 'Атаковать':
+        # Инициирование сражения | Combat initiation
         attack_enemy(current_room, player, rooms)
-        if not player.is_alive(): # Проверка, не умер ли при побеге
+        if not player.is_alive(): 
             print("\n☠️ В ГЛАЗАХ ПОТЕМНЕЛО... GAME OVER")
             break
             
     else:
+        # Перемещение по карте | Map movement
         current_room = move_player(current_room, command, rooms, player)
-        if not player.is_alive(): # Проверка, не умер ли при побеге
+        if not player.is_alive(): 
             print("\n☠️ В ГЛАЗАХ ПОТЕМНЕЛО... GAME OVER")
             break

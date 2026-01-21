@@ -1,66 +1,54 @@
-# Текстовая RPG на Python / Text-based RPG in Python
+# 📦 Текстовый Квест: Урок "Умные предметы" / Text Quest: "Smart Items" Lesson
 
-Это мой первый проект на Python. Консольная ролевая игра с элементами RPG. 
-This is my first Python project. A console-based role-playing game with RPG elements.
+Это консольная ролевая игра на Python. В ходе последнего этапа мы перешли от простого текста к полноценной **Объектно-Ориентированной Модели** предметов.
+This is a console-based RPG. In the latest stage, we moved from simple strings to a full **Object-Oriented Model** for items.
 
 ---
 
 ## 🇷🇺 Русский (Russian)
 
-### 🛠 Журнал исправлений
-| Баг | Классификация | Решение |
-|:---|:---|:---|
-| Магазин доступен из любой точки | **Logic** | Привязка к локации |
-| Нет авто-запуска магазина при входе | **Flow** | Авто-вызов `shop()` в комнате |
-| Ошибка при вводе букв в магазине | **UX** | Проверка `isdigit()` |
-| Урон при опечатках в бою | **Gameplay** | Проверка валидности пути |
-| Мгновенная победа в Холле | **Logic** | Команда «Побег» |
+### 🛠 Изменения (Таблица рефакторинга)
+| Файл | Что изменено | Результат |
+| :--- | :--- | :--- |
+| `items.py` | Создан новый модуль. Классы `Item`, `Weapon`, `Consumables`. | **Модульность:** логика предметов отделена от данных карты. |
+| `items.py` | Реализована "Фабрика предметов" `create_item`. | **Безопасность:** централизованное создание объектов по их именам. |
+| `game_data.py` | Очищены классы предметов, обновлен словарь `rooms`. | **Чистота:** карта теперь содержит объекты, а не текст. |
+| `game_utils.py` | Переписаны функции `attack_enemy` и `shop`. | **Полиморфизм:** игра сама вычисляет урон по типу предмета. |
+| `game_utils.py` | Обновлена система сохранений (сериализация имен). | **Стабильность:** объекты корректно переводятся в JSON. |
+| `main.py` | Обновлена логика команд "Поесть" и "Побег". | **Гибкость:** поиск по типу предмета, а не по слову. |
 
-### Функционал:
-- 🗺️ **Перемещение** по локациям (Холл, Кухня, Чулан, Сад, Магазин).
-- ⚔️ **Боевая система**: Сражения, критические удары, блоки щитом.
-- 🎒 **Инвентарь**: Сбор предметов, использование еды и зелий.
-- 💰 **Экономика**: Магазин с динамическим ассортиментом.
-- 📈 **Прокачка**: Уровни героя и восстановление здоровья.
-- 💾 **Сохранения**: Запись и чтение JSON-файла.
-
-### Структура проекта:
-- `main.py` — Основной цикл игры.
-- `game_data.py` — Данные о комнатах и врагах.
-- `game_utils.py` — Логика: бой, магазин, сохранения.
-
-### Как запустить:
-1. Установить Python.
-2. Скачать все файлы проекта.
-3. Запустить: `python main.py`.
+### 🐞 Решенные Баги
+*   **🔴 Критические:** Ошибки наследования (`super()`), краш при сохранении объектов в JSON, ошибки распаковки данных в Фабрике, неверный порядок создания предметов в магазине.
+*   **🟠 Логические:** Привязка магазина к локации, устранение несоответствий имен (например, "Топор" vs "Боевой Топор").
+*   **🟡 UI/UX:** Исправлен вывод объектов в инвентаре (теперь выводятся имена), добавлена проверка `isdigit()` в магазине.
 
 ---
 
 ## 🇺🇸 Английский (English)
 
-### 🛠 Bug Fix Log
-| Bug | Classification | Solution |
-|:---|:---|:---|
-| Shop available everywhere | **Logic** | Bind to location |
-| No auto-start for shop | **Flow** | Auto-call `shop()` in room |
-| Error on letter input in shop | **UX** | Added `isdigit()` check |
-| Damage on typos during movement | **Gameplay** | Path validity check |
-| Instant win in Hall | **Logic** | Added "Escape" command |
+### 🛠 Changes (Refactoring Table)
+| File | What's Changed | Result |
+| :--- | :--- | :--- |
+| `items.py` | Created new module. `Item`, `Weapon`, `Consumables` classes. | **Modularity:** item logic is separated from map data. |
+| `items.py` | Implemented "Item Factory" `create_item`. | **Safety:** centralized object creation by name. |
+| `game_data.py` | Cleaned item classes, updated `rooms` dictionary. | **Cleanliness:** map now contains objects instead of text. |
+| `game_utils.py` | Rewrote `attack_enemy` and `shop` functions. | **Polymorphism:** damage is calculated based on item type. |
+| `game_utils.py` | Updated save system (name serialization). | **Stability:** objects correctly translate to JSON and back. |
+| `main.py` | Updated "Eat" and "Escape" logic. | **Flexibility:** search by item type instead of specific word. |
 
-### Features:
-- 🗺️ **Movement** through locations (Hall, Kitchen, Closet, Garden, Shop).
-- ⚔️ **Combat System**: Battles, critical hits, shield blocks.
-- 🎒 **Inventory**: Collecting items, using food and potions.
-- 💰 **Economy**: Shop with dynamic assortment.
-- 📈 **Progression**: Hero levels and health recovery.
-- 💾 **Saves**: Save and load world state via JSON.
+### 🐞 Fixed Bugs
+*   **🔴 Critical:** Inheritance errors (`super()`), JSON save crashes, data unpacking errors in the Factory, incorrect item creation order in the shop.
+*   **🟠 Logic:** Bound shop to location, fixed name mismatches (e.g., "Axe" vs "Battle Axe").
+*   **🟡 UI/UX:** Fixed technical object display in inventory (now shows names), added `isdigit()` check for shop input.
 
-### Project Structure:
-- `main.py` — Main game loop.
-- `game_data.py` — Data about rooms and enemies.
-- `game_utils.py` — Game logic: combat, shop, saves.
+---
 
-### How to Run:
+### Структура проекта / Project Structure:
+- `main.py` — Основной цикл / Main loop.
+- `items.py` — Классы предметов и Фабрика / Item classes & Factory.
+- `game_data.py` — Карта и сущности / Map & Entities.
+- `game_utils.py` — Логика (Бой, Магазин, Сохранения) / Logic (Combat, Shop, Saves).
+
+### Как запустить / How to Run:
 1. Install Python.
-2. Download all project files.
-3. Run in the terminal: `python main.py`.
+2. Run: `python main.py`.

@@ -1,53 +1,49 @@
+# Модуль игровых механик и утилит | Game mechanics and utilities module
 import os
 import json
 import random
+from items import Weapon, Item, Consumables, create_item
 from game_data import Enemy, Player
-
-# --- 3. ФУНКЦИИ (ДВИЖОК) | FUNCTIONS (ENGINE) ---
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 SAVE_FILE = os.path.join(script_dir, "savefile.json")
 
 def save_game(room, player, map_data):
-    # 1. Готовим карту к сохранению (превращаем Enemies в словари) | Preparing the map for saving (turning Enemies into dictionaries)
+    # Логика сериализации данных и записи в JSON | Data serialization and JSON writing logic
     serializable_rooms = {}
 
     for room_name, room_info in map_data.items():
-        # Делаем копию комнаты, чтобы не сломать текущую игру | Make a copy of the room to not break the current game
         new_info = room_info.copy()
 
         enemy_obj = room_info.get('enemy')
         if enemy_obj:
-            # Есть ли враг, превращаем его в словарь | If there's an enemy, turn it into a dictionary
             new_info['enemy'] = {
                 'name': enemy_obj.name,
                 'hp': enemy_obj.hp,
                 'damage': enemy_obj.damage,
-                'is_enemy_object': True # Метка, чтобы при загрузке понять, что это был враг | A flag to understand during loading that this was an enemy
+                'is_enemy_object': True 
             }
         else:
             new_info['enemy'] = None
 
         serializable_rooms[room_name] = new_info
 
-    # 2. Сохраняем все данные в файл | Saving all data to file
     data = {
         'current_room': room,
-        'inventory': player.inventory,
+        'inventory': [item.name for item in player.inventory if hasattr(item, 'name')],
         'hp': player.hp,
         'xp': player.xp,
         'level': player.level,
         'gold': player.gold,
-        'rooms_data': serializable_rooms # Добавляем карту | Adding the map
+        'rooms_data': serializable_rooms 
     }
-    # "w" означает write (запись) | "w" means write
     with open(SAVE_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4) # indent для красоты файла | indent for file readability
+        json.dump(data, f, ensure_ascii=False, indent=4) 
     print("💾 Игра (и состояние врагов) сохранена!")
 
 def load_game(player):
+    # Логика чтения файла и десериализации объектов | File reading and object deserialization logic
     try:
-        # "r" означает read (чтение) | "r" means read
         with open(SAVE_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -55,17 +51,16 @@ def load_game(player):
         for room_name, room_info in loaded_rooms.items():
             enemy_data = room_info.get('enemy')
             if enemy_data and enemy_data.get('is_enemy_object'):
-                # 1. Создаем переменную new_enemy | 1. Create variable new_enemy
                 new_enemy = Enemy(
                     enemy_data['name'],
                     enemy_data['hp'],
                     enemy_data['damage']
                 )
-                # 2. Кладем её в словарь | 2. Put it in the dictionary
                 loaded_rooms[room_name]['enemy'] = new_enemy
 
 
-        player.inventory = data["inventory"]
+        loaded_names = data.get("inventory", [])
+        player.inventory = [create_item(name) for name in loaded_names if create_item(name)]
         player.hp = data["hp"]
         player.xp = data["xp"]
         player.level = data["level"]
@@ -76,25 +71,26 @@ def load_game(player):
         return data["current_room"], loaded_rooms
 
     except FileNotFoundError:
-        # Если файла нет — просто скажем об этом, без ошибок | If the file doesn't exist - just inform without errors
         print("❌ Файл сохранения не найден. Сначала сохраните игру.")
         return None
 
 def clear():
-    """Очищает экран консоли | Clears the console screen"""
+    # Очистка консоли (кроссплатформенная) | Console clearing (cross-platform)
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def show_status(room, player, rooms):
+    # Отображение информации о герое и локации | Hero and location info display
     print("------------------------------------------------")
     print(f"📍 Вы находитесь: {rooms[room]['описание']}")
     print(f"🚪 Выходы: {rooms[room]['exits']}")
     print(f"👤 Герой: Уровень {player.level} (Опыт: {player.xp}/100)")
     print(f"❤️ Здоровье: {player.hp}%")
     print(f"💰 Золото: {player.gold}")
-    print(f"🎒 Инвентарь: {player.inventory}")
+    print(f"🎒 Инвентарь: {[item.name for item in player.inventory]}")
     print("------------------------------------------------")
 
 def shop(player, rooms):
+    # Меню взаимодействия с торговцем | Interaction menu with the merchant
     while True:
         clear()
         print("\n🏪 Добро пожаловать в магазин!")
@@ -116,7 +112,8 @@ def shop(player, rooms):
                 price = items_for_sale[item_name]
                 if player.gold >= price:
                     player.gold -= price
-                    player.inventory.append(item_name)
+                    new_item = create_item(item_name)
+                    player.inventory.append(new_item)
                     print(f"Вы купили {item_name}")
                     input("\n Нажмите Enter, чтобы продолжить...")
                 else:
@@ -130,11 +127,13 @@ def shop(player, rooms):
             print("Пожалуйста, введите число")
 
 def check_enemy(room, map_data):
+    # Проверка наличия противника в комнате | Checking for an enemy in the room
     enemy = map_data[room].get('enemy')
     if enemy:
         print(f"\n👀 Внимание! В комнате находится {enemy.name} (HP: {enemy.hp})!")
 
 def move_player(current, direction, map_data, player):
+    # Логика перемещения и штраф за побег | Movement logic and escape penalty
     enemy = map_data[current].get('enemy')
     
     if direction in map_data[current]['exits']:
@@ -157,6 +156,7 @@ def move_player(current, direction, map_data, player):
         return current
 
 def handle_item(room, player, map_data):
+    # Логика подбора предмета из комнаты | Room item pickup logic
     thing = map_data[room]['item']
     if thing is None:
         print("Здесь пусто.")
@@ -166,20 +166,19 @@ def handle_item(room, player, map_data):
         print(f"Вы взяли: {thing}")
 
 def attack_enemy(room, player, map_data):
+    # Обработка боя, выбор оружия и расчет урона | Combat processing, weapon selection and damage calculation
     enemy = map_data[room].get('enemy')
     if not enemy:
         print("Здесь никого нет.")
         return 
-    # 1. Атака Игрока (с рандомом) | 1. Player Attack (randomized)
-    if 'Боевой Топор' in player.inventory:
-        damage = random.randint(35, 50) # Топор: 35-50 урона | Axe: 35-50 damage
-        weapon_name = 'Боевой Топор'
-    elif 'Меч' in player.inventory:
-        damage = random.randint(20, 35) # Меч: 20-35 урона | Sword: 20-35 damage
-        weapon_name = 'Меч'
-    else:
-        damage = random.randint(3, 8)   # Кулак: 3-8 урона | Fist: 3-8 damage
-        weapon_name = 'Кулак'
+
+    damage = 5
+    weapon_name = 'кулаки'
+    for thing in player.inventory:
+        if isinstance(thing, Weapon):
+            if thing.damage > damage:
+                damage = thing.damage
+                weapon_name = thing.name
 
     if random.random() < 0.20:  # 20% шанс критического удара | 20% chance of critical hit
         damage *= 2
@@ -189,7 +188,6 @@ def attack_enemy(room, player, map_data):
 
     enemy.hp -= damage
     
-    # 2. Проверка победы | 2. Check victory
     if enemy.hp <= 0:
         print(f"💀 {enemy.name} побежден!")
         map_data[room]['enemy'] = None 
@@ -198,22 +196,18 @@ def attack_enemy(room, player, map_data):
         player.gold += gold_gain
         player.xp += xp_gain
         print(f"⭐ Вы получили {xp_gain} опыта и {gold_gain} золота!") 
-        # Награда за победу | Reward for victory
         if player.xp >= 100:
             player.level += 1
             player.xp -= 100
-            player.hp = 100  # Восстанавливаем здоровье при повышении уровня | Restore health on level up
+            player.hp = 100 
             print(f"⬆️ Поздравляем! Вы достигли уровня {player.level}!")
             print("❤️ Ваше здоровье полностью восстановлено!")
+        return 
 
-        return # Возвращаем обновленные данные | Return updated data
-
-    # 3. Ответный удар Врага (с рандомом) | 3. Enemy counter-attack (randomized)
-    # Урон врага +/- 5 единиц | Enemy damage +/- 5 units
     enemy_dmg = random.randint(enemy.damage - 5, enemy.damage + 5)
 
-    if 'Щит' in player.inventory:
-        shield_block = random.randint(5, 10) # Щит блокирует 5-10 урона | Shield blocks 5-10 damage
+    if 'Щит' in [i.name for i in player.inventory]:
+        shield_block = random.randint(5, 10) 
         enemy_dmg -= shield_block
         print(f"🛡️ Ваш Щит блокировал {shield_block} урона!")
 
@@ -222,4 +216,3 @@ def attack_enemy(room, player, map_data):
     
     print(f"{enemy.name} еще стоит! (HP: {enemy.hp})")
     print(f"💥 {enemy.name} атакует вас в ответ на {enemy_dmg} урона!")
-    
